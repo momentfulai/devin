@@ -27,6 +27,8 @@ import {
   strategies,
   strategySnapshot,
 } from "@/lib/strategies";
+import { futureInWords, projectFuture } from "@/lib/future";
+import { applyWhatIf, tradeable } from "@/lib/whatif";
 
 export const maxDuration = 30;
 
@@ -64,6 +66,7 @@ How you talk:
 - Never invent a number. Call a tool and use what it returns. If a tool cannot answer, say so plainly.
 - You explain the adviser's reasoning; you do not place trades and you never promise a return.
 - When something is a judgement call, say what would have to be true for it to be wrong.
+- Future values and pretend trades are made-up possibilities, never predictions: always say so in the same breath as the number.
 - Strategies run in practice mode: you can show what one would have done and what it would trade, but nothing reaches a real account until the person switches it on themselves.`;
 
 /** Screens the person can be looking at, so "explain this" and "why this number" land on the right thing. */
@@ -73,6 +76,7 @@ const screens: Record<string, string> = {
   "/actions": "What to do: the adviser's suggested trades, each with the reason, the before and after, and what happens if they ignore it.",
   "/ideas": "Ideas: gaps in what they own and the investments that would fill them, with what would have to be true for each to work.",
   "/strategies": "Strategies: ready-made sets they can switch on with one tap, four rules they can switch on or off and combine, sliders to tune each one, a preview of what each would have done to their own money versus doing nothing, the trades it would place, and how their portfolio would look afterwards. Practice mode only.",
+  "/future": "Future: thousands of made-up futures for their portfolio shown as a widening fan, with a good, average and bad ending, and a pretend-trade mode where buying or selling something shows what it would do to their mix, their bad-year number and their cash. Nothing on this screen is real or a forecast.",
   "/accounts": "Accounts: the connected providers, when each last synced, and the one that needs a re-login and is therefore left out of the totals.",
 };
 
@@ -248,6 +252,54 @@ export async function POST(req: Request) {
               mixAfter: projection.mixAfter,
               changes: projection.changes,
             },
+          };
+        },
+      }),
+      projectFuture: tool({
+        description:
+          "Range of possible future values for the portfolio: bad, average and good endings, the chance of ending ahead, and the typical worst dip along the way. Made-up futures, never a forecast.",
+        inputSchema: z.object({
+          years: z.number().optional().describe("How far ahead, e.g. 10"),
+          monthlyContribution: z.number().optional().describe("Money added each month in pounds"),
+        }),
+        execute: async ({ years, monthlyContribution }) =>
+          futureInWords(
+            projectFuture({ years: years ?? 20, monthlyContribution: monthlyContribution ?? 0 }),
+          ),
+      }),
+      previewTrade: tool({
+        description:
+          "Pretend to buy or sell something and return what it would do to the portfolio: the new mix, the biggest company, the bad-year estimate, cash left and plain-English consequences. Nothing is executed.",
+        inputSchema: z.object({
+          trades: z
+            .array(
+              z.object({
+                symbol: z.string().describe("Ticker from the tradeable list, e.g. MSFT, VMID, GILT"),
+                action: z.enum(["Buy", "Sell"]),
+                amount: z.number().describe("Amount in pounds"),
+              }),
+            )
+            .describe("One or more pretend trades"),
+        }),
+        execute: async ({ trades }) => {
+          const unknown = trades.filter((t) => !tradeable.some((x) => x.symbol === t.symbol)).map((t) => t.symbol);
+          if (unknown.length > 0) return { found: false, unknown, available: tradeable.map((t) => t.symbol) };
+          const result = applyWhatIf(trades);
+          return {
+            found: true,
+            pretend: true,
+            trades: result.trades,
+            totalAfter: result.totalAfter,
+            cash: { before: result.cashBefore, after: result.cashAfter },
+            shortfall: result.shortfall,
+            biggestCompany: result.biggestCompany,
+            badYear: result.badYear,
+            feesPerYear: result.feesPerYear,
+            mixAfter: result.mixAfter,
+            notes: result.notes,
+            future: futureInWords(
+              projectFuture({ years: 20, startValue: result.totalAfter, badYearPct: result.badYear.after }),
+            ),
           };
         },
       }),

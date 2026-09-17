@@ -12,6 +12,7 @@ const tabs: { href: string; label: string; icon: IconName }[] = [
   { href: "/actions", label: "Actions", icon: "bolt" },
   { href: "/ideas", label: "Ideas", icon: "search" },
   { href: "/strategies", label: "Strategies", icon: "target" },
+  { href: "/future", label: "Future", icon: "spark" },
   { href: "/company/NVDA", label: "Company", icon: "chart" },
   { href: "/accounts", label: "Accounts", icon: "link" },
 ];

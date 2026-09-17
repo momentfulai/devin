@@ -21,6 +21,7 @@ const pageSuggestions: Record<string, string[]> = {
   "/actions": ["Why sell Nvidia?", "What happens if I do nothing?", "Which action matters most?"],
   "/ideas": ["Why these ideas for me?", "What could go wrong with this?", "Is this too risky for me?"],
   "/strategies": ["Which set suits me?", "What would this plan do to my portfolio?", "What does this cost me a year?"],
+  "/future": ["What could this be worth in 10 years?", "What if I bought Microsoft?", "How bad could the bad case get?"],
   "/accounts": ["Why is one account not counted?", "Which account costs me most?", "Am I paying twice for the same thing?"],
 };
 
@@ -34,6 +35,10 @@ const toolLabels: Record<string, string> = {
   whatIf: "Running the fall through your money",
   getStrategies: "Comparing the strategies",
   testStrategy: "Testing it on your money",
+  getPresets: "Reading the ready-made sets",
+  testPlan: "Running the whole plan",
+  projectFuture: "Playing out thousands of futures",
+  previewTrade: "Pretending you made the trade",
 };
 
 export function Chat() {

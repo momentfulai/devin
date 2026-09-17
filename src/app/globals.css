@@ -436,6 +436,51 @@ hr {
   transform: translateX(17px);
 }
 
+/* Pretend trades: everything they touch is dashed and amber, never mistaken for real */
+.chip.pretend {
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+  border: 1px dashed var(--warn);
+}
+.card.whatif {
+  border: 1px dashed var(--warn);
+  background: linear-gradient(0deg, var(--warn-soft), var(--warn-soft)), var(--surface);
+}
+.pretending .card.whatif .bar i {
+  opacity: 0.85;
+}
+.pretend-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px dashed var(--warn);
+  background: var(--warn-soft);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+/* Good / average / bad futures */
+.outcome {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+}
+.outcome.good {
+  border-color: var(--good);
+  background: var(--good-soft);
+}
+.outcome.bad {
+  border-color: var(--bad);
+  background: var(--bad-soft);
+}
+.outcome.average {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
