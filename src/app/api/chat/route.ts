@@ -15,7 +15,7 @@ import {
   recommendations,
   scenarios,
 } from "@/lib/portfolio";
-import { defaultKnobs, simulate, strategies, strategySnapshot } from "@/lib/strategies";
+import { defaultKnobs, project, simulate, strategies, strategySnapshot } from "@/lib/strategies";
 
 export const maxDuration = 30;
 
@@ -147,11 +147,21 @@ export async function POST(req: Request) {
         execute: async ({ id, settings }) => {
           const match = strategies.find((s) => s.id === id);
           if (!match) return { found: false, available: strategies.map((s) => s.id) };
+          const applied = { ...defaultKnobs(match), ...settings };
+          const projection = project(match.id, applied);
           return {
             found: true,
             name: match.name,
-            settings: { ...defaultKnobs(match), ...settings },
-            result: simulate(match.id, { ...defaultKnobs(match), ...settings }),
+            settings: applied,
+            result: simulate(match.id, applied),
+            portfolioAfter: {
+              biggestCompany: projection.biggestCompany,
+              badYear: projection.badYear,
+              cash: projection.cash,
+              feesPerYear: projection.feesPerYear,
+              mixAfter: projection.mixAfter,
+              changes: projection.changes,
+            },
           };
         },
       }),

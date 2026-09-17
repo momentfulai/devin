@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Icon } from "../Icon";
-import { Bar, Card, SectionTitle } from "../ui";
+import { Bar, Card, Donut, Legend, SectionTitle } from "../ui";
 import { PortfolioValueChart } from "../charts/PortfolioValueChart";
 import { money } from "@/lib/portfolio";
-import { defaultKnobs, deployTargets, simulate, strategies } from "@/lib/strategies";
+import { defaultKnobs, deployTargets, project, simulate, strategies } from "@/lib/strategies";
 
 type Deployment = { strategyId: string; accountId: string; knobs: Record<string, number> };
 
@@ -23,6 +23,8 @@ export function Strategies() {
   const strategy = strategies.find((s) => s.id === activeId) ?? strategies[0];
   const knobs = knobsById[strategy.id];
   const sim = useMemo(() => simulate(strategy.id, knobs), [strategy.id, knobs]);
+  const shift = useMemo(() => project(strategy.id, knobs), [strategy.id, knobs]);
+  const moved = shift.holdings.filter((h) => h.after !== h.before);
   const live = deployed.find((d) => d.strategyId === strategy.id);
 
   const chartData = sim.months.map((m) => ({ time: m.time, you: m.strategy, tracker: m.nothing }));
@@ -147,6 +149,99 @@ export function Strategies() {
           <p style={{ fontSize: 14 }}>{sim.plainVerdict}</p>
         </Card>
       </div>
+
+      <Card>
+        <SectionTitle
+          icon="layers"
+          title="Your portfolio the day after you switch it on"
+          aside={<span className="tiny">Today&apos;s prices, first round of trades</span>}
+        />
+        <div className="grid g3" style={{ alignItems: "center" }}>
+          <div>
+            <div className="tiny" style={{ marginBottom: 8 }}>
+              Now
+            </div>
+            <div className="row">
+              <Donut
+                slices={shift.mixBefore}
+                size={128}
+                centre={{ top: money(shift.invested.before + shift.cash.before), bottom: "today" }}
+              />
+              <Legend items={shift.mixBefore.map((s) => ({ label: s.label, colour: s.colour, value: `${s.pct}%` }))} />
+            </div>
+          </div>
+          <div>
+            <div className="tiny" style={{ marginBottom: 8 }}>
+              After the strategy runs
+            </div>
+            <div className="row">
+              <Donut
+                slices={shift.mixAfter}
+                size={128}
+                centre={{ top: money(shift.invested.after + shift.cash.after), bottom: "same money" }}
+              />
+              <Legend items={shift.mixAfter.map((s) => ({ label: s.label, colour: s.colour, value: `${s.pct}%` }))} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gap: 12 }}>
+            {shift.changes.map((c) => (
+              <div key={c.label}>
+                <div className="between">
+                  <span className="tiny">{c.label}</span>
+                  <span style={{ fontSize: 13 }}>
+                    <span className="muted">{c.before}</span>{" "}
+                    <Icon name="up" className={c.better ? "g" : "y"} style={{ width: 12, height: 12, transform: "rotate(90deg)" }} />{" "}
+                    <b style={{ color: c.better ? "var(--good)" : "var(--ink)" }}>{c.after}</b>
+                  </span>
+                </div>
+              </div>
+            ))}
+            <div>
+              <div className="between">
+                <span className="tiny">A bad year against your comfort limit</span>
+                <b style={{ fontSize: 13 }}>
+                  limit −{shift.badYear.comfortLimit}%
+                </b>
+              </div>
+              <Bar value={shift.badYear.before * 2.2} tone="bad" height={8} />
+              <Bar value={shift.badYear.after * 2.2} tone={shift.badYear.after <= shift.badYear.comfortLimit ? "good" : "warn"} height={8} />
+            </div>
+          </div>
+        </div>
+
+        {moved.length > 0 && (
+          <>
+            <hr />
+            <div className="tiny" style={{ marginBottom: 8 }}>
+              What moves, holding by holding
+            </div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {moved.map((h) => {
+                const scale = Math.max(h.before, h.after) || 1;
+                const grew = h.after > h.before;
+                return (
+                  <div key={h.symbol}>
+                    <div className="between">
+                      <span style={{ fontSize: 13 }}>
+                        <span className="dot" style={{ background: h.colour }} /> {h.name}
+                      </span>
+                      <span style={{ fontSize: 13 }}>
+                        <span className="muted">{money(h.before)}</span> → <b>{money(h.after)}</b>{" "}
+                        <span className="tiny" style={{ color: grew ? "var(--good)" : "var(--warn)" }}>
+                          {grew ? "+" : "−"}
+                          {money(Math.abs(h.after - h.before)).replace("−", "")}
+                        </span>
+                      </span>
+                    </div>
+                    <Bar value={(h.before / scale) * 100} tone="muted" height={6} />
+                    <Bar value={(h.after / scale) * 100} tone={grew ? "good" : "warn"} height={6} />
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </Card>
 
       <Card>
         <SectionTitle

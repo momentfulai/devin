@@ -1,4 +1,15 @@
-import { allocationOf, holdings, idleCash, totalValue, valueHistory } from "./portfolio";
+import {
+  badYearLossPct,
+  comfortLimitPct,
+  feesPerYear,
+  holdings,
+  idleCash,
+  nvidiaHiddenPct,
+  totalValue,
+  valueHistory,
+  allocationOf,
+  type Holding,
+} from "./portfolio";
 
 export type Knob = {
   id: string;
@@ -48,6 +59,22 @@ export type Simulation = {
 };
 
 export type DeployTarget = { accountId: string; provider: string; label: string };
+
+export type Mix = { label: string; pct: number; colour: string }[];
+
+export type Projection = {
+  /** Every holding at today's prices once the strategy's first round of trades has run. */
+  holdings: { symbol: string; name: string; colour: string; before: number; after: number }[];
+  mixBefore: Mix;
+  mixAfter: Mix;
+  biggestCompany: { name: string; before: number; after: number };
+  badYear: { before: number; after: number; comfortLimit: number };
+  cash: { before: number; after: number };
+  invested: { before: number; after: number };
+  feesPerYear: { before: number; after: number };
+  hiddenNvidiaPct: number;
+  changes: { label: string; before: string; after: string; better: boolean }[];
+};
 
 export const strategies: Strategy[] = [
   {
@@ -274,6 +301,121 @@ export function simulate(strategyId: string, knobs: Record<string, number>): Sim
     moneyAddedPerYear: Math.round(contributions * 12),
     trades,
     plainVerdict,
+  };
+}
+
+const kindLabels: Record<Holding["kind"], { label: string; colour: string }> = {
+  share: { label: "Single companies", colour: "#8a63ff" },
+  fund: { label: "Funds", colour: "#1a63ff" },
+  bond: { label: "Bonds", colour: "#0aa06e" },
+  cash: { label: "Cash", colour: "#98a0ae" },
+};
+
+function mixOf(values: Map<string, number>): Mix {
+  const total = [...values.values()].reduce((sum, v) => sum + v, 0);
+  return (Object.keys(kindLabels) as Holding["kind"][])
+    .map((kind) => {
+      const value = holdings
+        .filter((h) => h.kind === kind)
+        .reduce((sum, h) => sum + (values.get(h.symbol) ?? 0), 0);
+      return { label: kindLabels[kind].label, pct: round((value / total) * 100), colour: kindLabels[kind].colour };
+    })
+    .filter((slice) => slice.pct > 0);
+}
+
+/**
+ * What the portfolio looks like the day after the strategy's first round of trades,
+ * at today's prices. Funds keep their fees; selling a single company lowers the
+ * bad-year estimate roughly in line with how much of the concentrated bet is removed.
+ */
+export function project(strategyId: string, knobs: Record<string, number>): Projection {
+  const sim = simulate(strategyId, knobs);
+  const after = new Map(holdings.map((h) => [h.symbol, h.value]));
+  const before = new Map(holdings.map((h) => [h.symbol, h.value]));
+
+  for (const trade of sim.trades) {
+    const delta = trade.action === "Sell" ? -trade.amount : trade.amount;
+    after.set(trade.symbol, (after.get(trade.symbol) ?? 0) + delta);
+    // Buys are funded from cash first, which is what a real order would do.
+    if (trade.action === "Buy") {
+      after.set("CASH", Math.max(0, (after.get("CASH") ?? 0) - trade.amount));
+    }
+  }
+
+  const share = (values: Map<string, number>, symbol: string) => {
+    const total = [...values.values()].reduce((sum, v) => sum + v, 0);
+    return round(((values.get(symbol) ?? 0) / total) * 100);
+  };
+
+  const biggest = holdings
+    .filter((h) => h.kind === "share")
+    .reduce((top, h) => (h.value > top.value ? h : top));
+
+  const removedFromBiggest = Math.max(0, (before.get(biggest.symbol) ?? 0) - (after.get(biggest.symbol) ?? 0));
+  const bondsAdded = Math.max(0, (after.get("GILT") ?? 0) - (before.get("GILT") ?? 0));
+  const cashInvested = Math.max(0, (before.get("CASH") ?? 0) - (after.get("CASH") ?? 0));
+  const badYearAfter = round(
+    Math.max(
+      5,
+      badYearLossPct -
+        (removedFromBiggest / totalValue) * 100 * 1.4 -
+        (bondsAdded / totalValue) * 100 * 0.8 +
+        (cashInvested / totalValue) * 100 * 0.3,
+    ),
+  );
+
+  const cashBefore = before.get("CASH") ?? 0;
+  const cashAfter = after.get("CASH") ?? 0;
+  const investedBefore = totalValue - cashBefore;
+  const investedAfter = [...after.values()].reduce((sum, v) => sum + v, 0) - cashAfter;
+  const feesAfter = Math.round(feesPerYear + sim.costPerYear);
+
+  return {
+    holdings: holdings.map((h) => ({
+      symbol: h.symbol,
+      name: h.name,
+      colour: h.colour,
+      before: Math.round(before.get(h.symbol) ?? 0),
+      after: Math.round(after.get(h.symbol) ?? 0),
+    })),
+    mixBefore: mixOf(before),
+    mixAfter: mixOf(after),
+    biggestCompany: {
+      name: biggest.name,
+      before: share(before, biggest.symbol),
+      after: share(after, biggest.symbol),
+    },
+    badYear: { before: badYearLossPct, after: badYearAfter, comfortLimit: comfortLimitPct },
+    cash: { before: Math.round(cashBefore), after: Math.round(cashAfter) },
+    invested: { before: Math.round(investedBefore), after: Math.round(investedAfter) },
+    feesPerYear: { before: feesPerYear, after: feesAfter },
+    hiddenNvidiaPct: nvidiaHiddenPct,
+    changes: [
+      {
+        label: `Biggest single company (${biggest.name})`,
+        before: `${share(before, biggest.symbol)}% of everything`,
+        after: `${share(after, biggest.symbol)}% of everything`,
+        better: share(after, biggest.symbol) <= share(before, biggest.symbol),
+      },
+      {
+        label: "What a bad year would cost",
+        before: `−${badYearLossPct}%`,
+        after: `−${badYearAfter}%`,
+        better: badYearAfter <= badYearLossPct,
+      },
+      {
+        label: "Money doing nothing",
+        before: `£${Math.round(cashBefore).toLocaleString("en-GB")}`,
+        after: `£${Math.round(cashAfter).toLocaleString("en-GB")}`,
+        better: cashAfter <= cashBefore,
+      },
+      {
+        label: "Costs a year",
+        before: `£${feesPerYear.toLocaleString("en-GB")}`,
+        after: `£${feesAfter.toLocaleString("en-GB")}`,
+        better: feesAfter <= feesPerYear,
+      },
+    ],
   };
 }
 
