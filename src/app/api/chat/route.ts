@@ -8,6 +8,7 @@ import {
   companies,
   feesPerYear,
   holdings,
+  money,
   notDoing,
   opportunities,
   overlap,
@@ -55,12 +56,34 @@ How you talk:
 - When something is a judgement call, say what would have to be true for it to be wrong.
 - Strategies run in practice mode: you can show what one would have done and what it would trade, but nothing reaches a real account until the person switches it on themselves.`;
 
+/** Screens the person can be looking at, so "explain this" and "why this number" land on the right thing. */
+const screens: Record<string, string> = {
+  "/": "Today: total value, this week's move, a 1-year value chart against a plain world tracker, the mix of what they own, and every holding with its size.",
+  "/risk": "What's at risk: the bad-year loss estimate against their comfort limit, what their money reacts to, scenario falls in pounds, and companies they own twice through different funds.",
+  "/actions": "What to do: the adviser's suggested trades, each with the reason, the before and after, and what happens if they ignore it.",
+  "/ideas": "Ideas: gaps in what they own and the investments that would fill them, with what would have to be true for each to work.",
+  "/strategies": "Strategies: four rules they can tune with sliders, a preview of what each would have done to their own money versus doing nothing, the trades it would place, and how their portfolio would look afterwards. Practice mode only.",
+  "/accounts": "Accounts: the connected providers, when each last synced, and the one that needs a re-login and is therefore left out of the totals.",
+};
+
+/** A small always-on snapshot so the assistant knows the person before it calls a single tool. */
+function appContext(page: string | undefined) {
+  const snapshot = portfolioSnapshot();
+  const looking = page && screens[page] ? `\nThey are looking at ${screens[page]}` : "";
+  return `Who you are talking to, right now:
+- Total ${money(snapshot.totalValue)} across ${snapshot.accounts.filter((a) => a.countedInTotal).length} connected accounts, ${money(snapshot.idleCash)} sitting in cash, ${money(snapshot.feesPerYear)} a year in fees.
+- Biggest positions: ${[...snapshot.holdings].sort((a, b) => b.value - a.value).slice(0, 4).map((h) => `${h.name} ${money(h.value)} (${h.allocationPct}%)`).join(", ")}.
+- A bad year is estimated at −${badYearLossPct}% against the −${comfortLimitPct}% they said they could live with.
+- Strategies they can try: ${strategies.map((s) => `${s.name} (${s.id})`).join(", ")}.${looking}
+Use the tools for anything more precise than this.`;
+}
+
 export async function POST(req: Request) {
   if (overRateLimit(req)) {
     return Response.json({ error: "Too many questions at once. Try again in a minute." }, { status: 429 });
   }
 
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  const { messages, page }: { messages: UIMessage[]; page?: string } = await req.json();
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return Response.json({ error: "No messages sent." }, { status: 400 });
@@ -74,7 +97,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: gateway(chatModel),
-    system,
+    system: `${system}\n\n${appContext(page)}`,
     messages: await convertToModelMessages(messages),
     stopWhen: stepCountIs(6),
     tools: {

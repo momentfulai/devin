@@ -1,16 +1,28 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { Icon } from "./Icon";
+import { accounts } from "@/lib/portfolio";
 
-const suggestions = [
+const generalSuggestions = [
   "Am I too concentrated?",
   "Explain my fees",
   "Why sell Nvidia?",
   "What if markets fall 30%?",
   "Which strategy suits me?",
 ];
+
+/** What the person can see right now, so the assistant answers about this screen. */
+const pageSuggestions: Record<string, string[]> = {
+  "/": ["Explain this chart", "Why am I up this week?", "What should I fix first?"],
+  "/risk": ["Why is a bad year 31%?", "Where do I own the same company twice?", "How do I get inside my limit?"],
+  "/actions": ["Why sell Nvidia?", "What happens if I do nothing?", "Which action matters most?"],
+  "/ideas": ["Why these ideas for me?", "What could go wrong with this?", "Is this too risky for me?"],
+  "/strategies": ["Which strategy suits me?", "What would this do to my portfolio?", "What does this cost me a year?"],
+  "/accounts": ["Why is one account not counted?", "Which account costs me most?", "Am I paying twice for the same thing?"],
+};
 
 const toolLabels: Record<string, string> = {
   getPortfolio: "Reading your accounts",
@@ -28,6 +40,9 @@ export function Chat() {
   const [open, setOpen] = useState(true);
   const [input, setInput] = useState("");
   const { messages, sendMessage, status, error } = useChat();
+  const pathname = usePathname();
+  const suggestions = pageSuggestions[pathname] ?? generalSuggestions;
+  const connected = accounts.filter((a) => a.counted).length;
   const body = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +54,7 @@ export function Chat() {
   const send = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
-    sendMessage({ text: trimmed });
+    sendMessage({ text: trimmed }, { body: { page: pathname } });
     setInput("");
   };
 
@@ -77,7 +92,8 @@ export function Chat() {
 
       <div className="body" ref={body}>
         <div className="msg bot">
-          I have read your 3 accounts. Ask me anything about your money and I will show the working.
+          I have read your {connected} connected accounts and everything on this page. Ask me anything about your
+          money and I will show the working.
         </div>
 
         {messages.map((m) => (
