@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Chat } from "@/components/Chat";
+import { themeBootScript } from "@/components/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +18,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={geistSans.variable}>
+    <html lang="en" className={geistSans.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body>
         <Nav />
         <main>

@@ -1,20 +1,60 @@
 :root {
   --bg: #f6f7f9;
   --surface: #fff;
+  --raised: #fff;
   --ink: #0a0c11;
   --ink-2: #565e6e;
   --ink-3: #98a0ae;
+  --on-ink: #fff;
   --line: #e9ebf0;
+  --soft: #f0f1f5;
+  --soft-2: #f4f5f8;
+  --hover: #ecedf2;
   --accent: #1a63ff;
   --accent-soft: #eef3ff;
   --good: #0aa06e;
+  --good-soft: #e6f7f0;
   --warn: #e2a33c;
+  --warn-ink: #a9761f;
+  --warn-soft: #fdf4e5;
   --bad: #e2504a;
+  --bad-soft: #fdecec;
   --purple: #8a63ff;
+  --purple-soft: #f1ecff;
   --teal: #17b3c3;
   --pink: #ef6fa8;
+  --header: rgba(246, 247, 249, 0.82);
   --r: 20px;
   --shadow: 0 1px 2px rgba(10, 12, 17, 0.04), 0 10px 30px rgba(10, 12, 17, 0.06);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b0d12;
+  --surface: #141821;
+  --raised: #1d2330;
+  --ink: #f1f3f8;
+  --ink-2: #a7afc0;
+  --ink-3: #7b8395;
+  --on-ink: #0b0d12;
+  --line: #242a37;
+  --soft: #1b212c;
+  --soft-2: #222939;
+  --hover: #252c3a;
+  --accent: #5b8cff;
+  --accent-soft: #17203a;
+  --good: #2fc396;
+  --good-soft: #102a23;
+  --warn: #e8b75f;
+  --warn-ink: #e8b75f;
+  --warn-soft: #2c2415;
+  --bad: #f2716b;
+  --bad-soft: #2e1a1a;
+  --purple: #a487ff;
+  --purple-soft: #201b38;
+  --header: rgba(11, 13, 18, 0.82);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
 }
 
 * {
@@ -75,7 +115,7 @@ header.top {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(246, 247, 249, 0.82);
+  background: var(--header);
   backdrop-filter: saturate(180%) blur(18px);
   border-bottom: 1px solid var(--line);
 }
@@ -118,15 +158,15 @@ nav.tabs a {
   text-decoration: none;
 }
 nav.tabs a:hover {
-  background: #ecedf2;
+  background: var(--hover);
   color: var(--ink);
 }
 nav.tabs a.on {
   background: var(--ink);
-  color: #fff;
+  color: var(--on-ink);
 }
 nav.tabs a.on svg {
-  stroke: #fff;
+  stroke: var(--on-ink);
 }
 .spacer {
   flex: 1;
@@ -166,7 +206,8 @@ nav.tabs a.on svg {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #dfe3ee, #c9d2e6);
+  background: linear-gradient(135deg, var(--soft-2), var(--hover));
+  border: 1px solid var(--line);
 }
 
 main {
@@ -230,19 +271,19 @@ hr {
   font-weight: 600;
   padding: 4px 9px;
   border-radius: 8px;
-  background: #f0f1f5;
+  background: var(--soft);
   color: var(--ink-2);
 }
 .chip.good {
-  background: #e6f7f0;
+  background: var(--good-soft);
   color: var(--good);
 }
 .chip.warn {
-  background: #fdf4e5;
-  color: #a9761f;
+  background: var(--warn-soft);
+  color: var(--warn-ink);
 }
 .chip.bad {
-  background: #fdecec;
+  background: var(--bad-soft);
   color: var(--bad);
 }
 .chip.info {
@@ -256,7 +297,7 @@ hr {
   border: 0;
   border-radius: 12px;
   background: var(--ink);
-  color: #fff;
+  color: var(--on-ink);
   padding: 10px 15px;
   font: inherit;
   font-size: 14px;
@@ -265,11 +306,15 @@ hr {
   text-decoration: none;
 }
 .btn.sec {
-  background: #f0f1f5;
+  background: var(--soft);
   color: var(--ink);
 }
 .btn.blue {
   background: var(--accent);
+  color: #fff;
+}
+.btn svg {
+  stroke: currentColor;
 }
 .btn.sm {
   padding: 7px 12px;
@@ -282,7 +327,7 @@ hr {
 }
 .seg {
   display: inline-flex;
-  background: #f0f1f5;
+  background: var(--soft);
   border-radius: 10px;
   padding: 3px;
 }
@@ -297,7 +342,7 @@ hr {
   cursor: pointer;
 }
 .seg button.on {
-  background: #fff;
+  background: var(--raised);
   color: var(--ink);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
@@ -312,13 +357,92 @@ hr {
   max-width: 100%;
 }
 
+/* Ready-made strategy sets */
+.preset {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.preset:hover {
+  border-color: var(--ink-3);
+}
+.preset.on {
+  border-color: var(--good);
+  background: var(--good-soft);
+}
+
+/* One rule in the plan: tap the body to tune it, the switch to run it */
+.rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+}
+.rule.tuning {
+  border-color: var(--accent);
+}
+.rule.on {
+  background: var(--good-soft);
+}
+.rule-body {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  text-align: left;
+  flex: 1;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  padding: 0;
+  cursor: pointer;
+}
+.switch {
+  flex: none;
+  width: 40px;
+  height: 23px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--hover);
+  padding: 3px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.switch .knob {
+  display: block;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+.switch.on {
+  background: var(--good);
+}
+.switch.on .knob {
+  transform: translateX(17px);
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   height: 6px;
   border-radius: 999px;
-  background: #e7e9ef;
+  background: var(--soft-2);
   outline: none;
 }
 input[type="range"]::-webkit-slider-thumb {
@@ -327,7 +451,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--raised);
   border: 1px solid var(--line);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
   cursor: pointer;
@@ -336,7 +460,7 @@ input[type="range"]::-moz-range-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--raised);
   border: 1px solid var(--line);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
   cursor: pointer;
@@ -379,22 +503,22 @@ select.btn {
   flex: none;
 }
 .iconbox.g {
-  background: #e6f7f0;
+  background: var(--good-soft);
 }
 .iconbox.y {
-  background: #fdf4e5;
+  background: var(--warn-soft);
 }
 .iconbox.r {
-  background: #fdecec;
+  background: var(--bad-soft);
 }
 .iconbox.p {
-  background: #f1ecff;
+  background: var(--purple-soft);
 }
 
 .bar {
   height: 7px;
   border-radius: 99px;
-  background: #eef0f4;
+  background: var(--soft-2);
   overflow: hidden;
 }
 .bar > i {
@@ -499,7 +623,7 @@ ul.clean li:first-child {
   white-space: pre-wrap;
 }
 .msg.bot {
-  background: #f4f5f8;
+  background: var(--soft-2);
   border-bottom-left-radius: 5px;
   justify-self: start;
 }
@@ -510,7 +634,7 @@ ul.clean li:first-child {
   border-bottom-right-radius: 5px;
 }
 .msg .mini {
-  background: #fff;
+  background: var(--raised);
   border-radius: 10px;
   padding: 8px;
   margin-top: 8px;
@@ -539,6 +663,8 @@ ul.clean li:first-child {
 }
 .chat input {
   flex: 1;
+  background: var(--surface);
+  color: var(--ink);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 9px 13px;
@@ -555,7 +681,7 @@ ul.clean li:first-child {
   border-radius: 999px;
   padding: 12px 18px;
   background: var(--ink);
-  color: #fff;
+  color: var(--on-ink);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -566,7 +692,25 @@ ul.clean li:first-child {
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  background: var(--hover);
+  color: var(--ink);
 }
 
 @media (max-width: 1050px) {

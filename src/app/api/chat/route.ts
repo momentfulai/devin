@@ -16,7 +16,17 @@ import {
   recommendations,
   scenarios,
 } from "@/lib/portfolio";
-import { defaultKnobs, project, simulate, strategies, strategySnapshot } from "@/lib/strategies";
+import {
+  defaultKnobs,
+  presetKnobs,
+  presets,
+  project,
+  projectCombo,
+  simulate,
+  simulateCombo,
+  strategies,
+  strategySnapshot,
+} from "@/lib/strategies";
 
 export const maxDuration = 30;
 
@@ -62,7 +72,7 @@ const screens: Record<string, string> = {
   "/risk": "What's at risk: the bad-year loss estimate against their comfort limit, what their money reacts to, scenario falls in pounds, and companies they own twice through different funds.",
   "/actions": "What to do: the adviser's suggested trades, each with the reason, the before and after, and what happens if they ignore it.",
   "/ideas": "Ideas: gaps in what they own and the investments that would fill them, with what would have to be true for each to work.",
-  "/strategies": "Strategies: four rules they can tune with sliders, a preview of what each would have done to their own money versus doing nothing, the trades it would place, and how their portfolio would look afterwards. Practice mode only.",
+  "/strategies": "Strategies: ready-made sets they can switch on with one tap, four rules they can switch on or off and combine, sliders to tune each one, a preview of what each would have done to their own money versus doing nothing, the trades it would place, and how their portfolio would look afterwards. Practice mode only.",
   "/accounts": "Accounts: the connected providers, when each last synced, and the one that needs a re-login and is therefore left out of the totals.",
 };
 
@@ -74,7 +84,8 @@ function appContext(page: string | undefined) {
 - Total ${money(snapshot.totalValue)} across ${snapshot.accounts.filter((a) => a.countedInTotal).length} connected accounts, ${money(snapshot.idleCash)} sitting in cash, ${money(snapshot.feesPerYear)} a year in fees.
 - Biggest positions: ${[...snapshot.holdings].sort((a, b) => b.value - a.value).slice(0, 4).map((h) => `${h.name} ${money(h.value)} (${h.allocationPct}%)`).join(", ")}.
 - A bad year is estimated at −${badYearLossPct}% against the −${comfortLimitPct}% they said they could live with.
-- Strategies they can try: ${strategies.map((s) => `${s.name} (${s.id})`).join(", ")}.${looking}
+- Strategies they can try: ${strategies.map((s) => `${s.name} (${s.id})`).join(", ")}, on their own or combined.
+- Ready-made sets: ${presets.map((p) => `${p.name} (${p.id})`).join(", ")}.${looking}
 Use the tools for anything more precise than this.`;
 }
 
@@ -177,6 +188,58 @@ export async function POST(req: Request) {
             name: match.name,
             settings: applied,
             result: simulate(match.id, applied),
+            portfolioAfter: {
+              biggestCompany: projection.biggestCompany,
+              badYear: projection.badYear,
+              cash: projection.cash,
+              feesPerYear: projection.feesPerYear,
+              mixAfter: projection.mixAfter,
+              changes: projection.changes,
+            },
+          };
+        },
+      }),
+      getPresets: tool({
+        description:
+          "Ready-made sets of strategies the user can switch on with one tap, and who each set is for.",
+        inputSchema: z.object({}),
+        execute: async () =>
+          presets.map((p) => ({
+            id: p.id,
+            name: p.name,
+            oneLiner: p.oneLiner,
+            forWhom: p.forWhom,
+            rules: p.strategyIds.map((id) => strategies.find((s) => s.id === id)?.name ?? id),
+            settings: presetKnobs(p),
+          })),
+      }),
+      testPlan: tool({
+        description:
+          "Run several strategies together — or a ready-made set — and return what the combination would have done over the last year, plus the portfolio it leaves behind.",
+        inputSchema: z.object({
+          presetId: z.string().optional().describe("A ready-made set, e.g. calm, habit, tidy, everything"),
+          ids: z.array(z.string()).optional().describe("Strategy ids to run together, e.g. [\"drip\", \"buy-dip\"]"),
+        }),
+        execute: async ({ presetId, ids }) => {
+          const preset = presetId ? presets.find((p) => p.id === presetId) : undefined;
+          if (presetId && !preset) return { found: false, available: presets.map((p) => p.id) };
+          const chosen = preset ? preset.strategyIds : (ids ?? []);
+          const unknown = chosen.filter((id) => !strategies.some((s) => s.id === id));
+          if (chosen.length === 0 || unknown.length > 0) {
+            return { found: false, unknown, available: strategies.map((s) => s.id) };
+          }
+          const settings = preset
+            ? presetKnobs(preset)
+            : Object.fromEntries(
+                strategies.filter((s) => chosen.includes(s.id)).map((s) => [s.id, defaultKnobs(s)]),
+              );
+          const projection = projectCombo(chosen, settings);
+          return {
+            found: true,
+            name: preset?.name ?? "Your own combination",
+            rules: chosen,
+            settings,
+            result: simulateCombo(chosen, settings),
             portfolioAfter: {
               biggestCompany: projection.biggestCompany,
               badYear: projection.badYear,

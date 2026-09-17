@@ -20,7 +20,7 @@ const pageSuggestions: Record<string, string[]> = {
   "/risk": ["Why is a bad year 31%?", "Where do I own the same company twice?", "How do I get inside my limit?"],
   "/actions": ["Why sell Nvidia?", "What happens if I do nothing?", "Which action matters most?"],
   "/ideas": ["Why these ideas for me?", "What could go wrong with this?", "Is this too risky for me?"],
-  "/strategies": ["Which strategy suits me?", "What would this do to my portfolio?", "What does this cost me a year?"],
+  "/strategies": ["Which set suits me?", "What would this plan do to my portfolio?", "What does this cost me a year?"],
   "/accounts": ["Why is one account not counted?", "Which account costs me most?", "Am I paying twice for the same thing?"],
 };
 

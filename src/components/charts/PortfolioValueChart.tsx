@@ -10,6 +10,7 @@ import {
   type IChartApi,
   type Time,
 } from "lightweight-charts";
+import { useTheme } from "../theme";
 
 export type ValuePoint = { time: string; you: number; tracker: number };
 
@@ -28,6 +29,8 @@ export function PortfolioValueChart({
 }) {
   const host = useRef<HTMLDivElement>(null);
   const chart = useRef<IChartApi | null>(null);
+  const { theme } = useTheme();
+  const dark = theme === "dark";
 
   useEffect(() => {
     const node = host.current;
@@ -36,32 +39,35 @@ export function PortfolioValueChart({
     const instance = createChart(node, {
       height,
       layout: {
-        background: { type: ColorType.Solid, color: "#ffffff" },
-        textColor: "#98a0ae",
+        background: { type: ColorType.Solid, color: dark ? "#141821" : "#ffffff" },
+        textColor: dark ? "#7b8395" : "#98a0ae",
         fontFamily: "-apple-system, BlinkMacSystemFont, Inter, Roboto, sans-serif",
         attributionLogo: false,
       },
       grid: {
-        horzLines: { color: "#f1f2f6" },
+        horzLines: { color: dark ? "#232936" : "#f1f2f6" },
         vertLines: { visible: false },
       },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false, fixLeftEdge: true, fixRightEdge: true },
-      crosshair: { horzLine: { labelBackgroundColor: "#0a0c11" }, vertLine: { labelBackgroundColor: "#0a0c11" } },
+      crosshair: {
+        horzLine: { labelBackgroundColor: dark ? "#3a4256" : "#0a0c11" },
+        vertLine: { labelBackgroundColor: dark ? "#3a4256" : "#0a0c11" },
+      },
       handleScale: false,
       handleScroll: false,
     });
 
     const you = instance.addSeries(AreaSeries, {
-      lineColor: "#1a63ff",
+      lineColor: dark ? "#5b8cff" : "#1a63ff",
       lineWidth: 2,
-      topColor: "rgba(26,99,255,0.22)",
+      topColor: dark ? "rgba(91,140,255,0.28)" : "rgba(26,99,255,0.22)",
       bottomColor: "rgba(26,99,255,0)",
       priceLineVisible: false,
       priceFormat: { type: "price", precision: 0, minMove: 1 },
     });
     const tracker = instance.addSeries(LineSeries, {
-      color: "#c6cbd6",
+      color: dark ? "#5c6577" : "#c6cbd6",
       lineWidth: 2,
       lineStyle: LineStyle.Dashed,
       priceLineVisible: false,
@@ -85,7 +91,7 @@ export function PortfolioValueChart({
       instance.remove();
       chart.current = null;
     };
-  }, [data, height, months]);
+  }, [data, height, months, dark]);
 
   return <div ref={host} style={{ width: "100%", height }} />;
 }

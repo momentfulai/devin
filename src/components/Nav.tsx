@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
+import { ThemeToggle } from "./theme";
+import { accounts } from "@/lib/portfolio";
 
 const tabs: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Today", icon: "home" },
@@ -37,8 +39,10 @@ export function Nav() {
         </nav>
         <span className="spacer" />
         <span className="chip good">
-          <Icon name="check" className="g" style={{ width: 13, height: 13 }} />3 accounts live
+          <Icon name="check" className="g" style={{ width: 13, height: 13 }} />
+          {accounts.filter((a) => a.counted).length} accounts live
         </span>
+        <ThemeToggle />
         <span className="avatar" />
       </div>
     </header>

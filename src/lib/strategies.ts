@@ -166,12 +166,18 @@ function tracker(monthly: number[], start: number, contributions: number) {
   return out;
 }
 
-/** Deterministic preview: same knobs always give the same numbers, so the chart never jitters. */
-export function simulate(strategyId: string, knobs: Record<string, number>): Simulation {
-  const start = valueHistory[0].you;
-  const nothing = tracker(baseReturns, start, 0);
+/** What one strategy does to a month's return, plus what it trades to get there. */
+type Effect = {
+  shape: (monthReturn: number, month: number) => number;
+  contributions: number;
+  tradesPerYear: number;
+  costPerYear: number;
+  trades: Trade[];
+  plainVerdict: string;
+};
 
-  let returns = baseReturns;
+function effectOf(strategyId: string, knobs: Record<string, number>): Effect {
+  let shape: Effect["shape"] = (r) => r;
   let contributions = 0;
   let tradesPerYear = 0;
   let costPerYear = 0;
@@ -187,7 +193,7 @@ export function simulate(strategyId: string, knobs: Record<string, number>): Sim
     const trimmedShare = over.reduce((sum, o) => sum + o.excess, 0) / totalValue;
     // Trimming a concentrated winner damps both the falls and the rises.
     const damp = Math.min(0.45, trimmedShare * 1.6);
-    returns = baseReturns.map((r) => (r > 0 ? r * (1 - damp * 0.8) : r * (1 - damp)));
+    shape = (r) => (r > 0 ? r * (1 - damp * 0.8) : r * (1 - damp));
     tradesPerYear = Math.round((12 / cadence) * Math.max(1, over.length));
     costPerYear = tradesPerYear * 3;
     trades = over.map((o) => ({
@@ -235,7 +241,7 @@ export function simulate(strategyId: string, knobs: Record<string, number>): Sim
     // A smaller trigger fires more often; a bigger slice puts more to work each time.
     const fires = Math.max(1, Math.round(18 / trigger));
     const boost = (slice / 100) * (reserve / totalValue) * 0.35;
-    returns = baseReturns.map((r, i) => (r < 0 && i % Math.max(1, Math.round(12 / fires)) === 0 ? r + boost : r));
+    shape = (r, i) => (r < 0 && i % Math.max(1, Math.round(12 / fires)) === 0 ? r + boost : r);
     tradesPerYear = fires;
     costPerYear = fires * 3;
     trades = [
@@ -254,7 +260,7 @@ export function simulate(strategyId: string, knobs: Record<string, number>): Sim
     const badYear = 31;
     const gap = Math.max(0, badYear - limit);
     const toBonds = Math.min(0.6, gap / badYear);
-    returns = baseReturns.map((r) => r * (1 - toBonds) + 0.0032 * toBonds);
+    shape = (r) => r * (1 - toBonds) + 0.0032 * toBonds;
     tradesPerYear = gap > 0 ? 4 : 1;
     costPerYear = tradesPerYear * 3;
     trades =
@@ -275,6 +281,21 @@ export function simulate(strategyId: string, knobs: Record<string, number>): Sim
         ? `Moves ${round(toBonds * 100)}% into short bonds so a bad year costs about ${limit}% instead of ${badYear}%.`
         : `Your limit is already above what a bad year would cost, so nothing moves today.`;
   }
+
+  return { shape, contributions, tradesPerYear, costPerYear, trades, plainVerdict };
+}
+
+/** Runs one or more strategies together: each one reshapes the month the previous one left behind. */
+function run(effects: Effect[]): Simulation {
+  const start = valueHistory[0].you;
+  const nothing = tracker(baseReturns, start, 0);
+
+  const returns = baseReturns.map((r, i) => effects.reduce((month, e) => e.shape(month, i), r));
+  const contributions = effects.reduce((sum, e) => sum + e.contributions, 0);
+  const tradesPerYear = effects.reduce((sum, e) => sum + e.tradesPerYear, 0);
+  const costPerYear = effects.reduce((sum, e) => sum + e.costPerYear, 0);
+  const trades = effects.flatMap((e) => e.trades);
+  const plainVerdict = effects.map((e) => e.plainVerdict).join(" ");
 
   const strategy = tracker(returns, start, contributions);
   const months = valueHistory.slice(1).map((m, i) => ({
@@ -304,6 +325,18 @@ export function simulate(strategyId: string, knobs: Record<string, number>): Sim
   };
 }
 
+/** Deterministic preview: same knobs always give the same numbers, so the chart never jitters. */
+export function simulate(strategyId: string, knobs: Record<string, number>): Simulation {
+  return run([effectOf(strategyId, knobs)]);
+}
+
+/** Preview several strategies running side by side, the way a bundle does. */
+export function simulateCombo(ids: string[], knobsById: Record<string, Record<string, number>>): Simulation {
+  const chosen = strategies.filter((s) => ids.includes(s.id));
+  if (chosen.length === 0) return run([]);
+  return run(chosen.map((s) => effectOf(s.id, knobsById[s.id] ?? defaultKnobs(s))));
+}
+
 const kindLabels: Record<Holding["kind"], { label: string; colour: string }> = {
   share: { label: "Single companies", colour: "#8a63ff" },
   fund: { label: "Funds", colour: "#1a63ff" },
@@ -328,8 +361,7 @@ function mixOf(values: Map<string, number>): Mix {
  * at today's prices. Funds keep their fees; selling a single company lowers the
  * bad-year estimate roughly in line with how much of the concentrated bet is removed.
  */
-export function project(strategyId: string, knobs: Record<string, number>): Projection {
-  const sim = simulate(strategyId, knobs);
+export function projectOf(sim: Simulation): Projection {
   const after = new Map(holdings.map((h) => [h.symbol, h.value]));
   const before = new Map(holdings.map((h) => [h.symbol, h.value]));
 
@@ -417,6 +449,74 @@ export function project(strategyId: string, knobs: Record<string, number>): Proj
       },
     ],
   };
+}
+
+export function project(strategyId: string, knobs: Record<string, number>): Projection {
+  return projectOf(simulate(strategyId, knobs));
+}
+
+export function projectCombo(ids: string[], knobsById: Record<string, Record<string, number>>): Projection {
+  return projectOf(simulateCombo(ids, knobsById));
+}
+
+export type Preset = {
+  id: string;
+  name: string;
+  oneLiner: string;
+  icon: "shield" | "coin" | "target" | "scale";
+  forWhom: string;
+  strategyIds: string[];
+  /** Only the knobs this bundle changes; the rest stay at their defaults. */
+  tuned: Record<string, Record<string, number>>;
+};
+
+/** Ready-made combinations, so nobody has to design a plan from scratch. */
+export const presets: Preset[] = [
+  {
+    id: "calm",
+    name: "Calm and steady",
+    oneLiner: "Smaller swings, fewer surprises",
+    icon: "shield",
+    forWhom: "You would rather sleep well than squeeze out the last few percent",
+    strategyIds: ["trim-winners", "safety-net"],
+    tuned: { "trim-winners": { limit: 5 }, "safety-net": { limit: 20 } },
+  },
+  {
+    id: "habit",
+    name: "Build the habit",
+    oneLiner: "Put money in every month and buy more when markets drop",
+    icon: "coin",
+    forWhom: "You have spare cash each month and a long time to leave it alone",
+    strategyIds: ["drip", "buy-dip"],
+    tuned: { drip: { amount: 400 }, "buy-dip": { trigger: 7, slice: 40 } },
+  },
+  {
+    id: "tidy",
+    name: "Keep it tidy",
+    oneLiner: "Stop any one company taking over, and keep investing",
+    icon: "scale",
+    forWhom: "Your winners have grown into a big bet you did not choose",
+    strategyIds: ["trim-winners", "drip"],
+    tuned: { "trim-winners": { limit: 6, cadence: 3 }, drip: { amount: 300 } },
+  },
+  {
+    id: "everything",
+    name: "The full plan",
+    oneLiner: "All four rules working together",
+    icon: "target",
+    forWhom: "You want the adviser to handle size, risk, habit and dips at once",
+    strategyIds: ["trim-winners", "drip", "buy-dip", "safety-net"],
+    tuned: {},
+  },
+];
+
+/** The knobs a preset runs with: its own tuning on top of each strategy's defaults. */
+export function presetKnobs(preset: Preset): Record<string, Record<string, number>> {
+  return Object.fromEntries(
+    strategies
+      .filter((s) => preset.strategyIds.includes(s.id))
+      .map((s) => [s.id, { ...defaultKnobs(s), ...(preset.tuned[s.id] ?? {}) }]),
+  );
 }
 
 /** What the assistant is allowed to read about strategies. */

@@ -1,6 +1,7 @@
 "use client";
 
 import { TradingViewWidget } from "./TradingViewWidget";
+import { useTheme } from "../theme";
 
 const chartFont = "-apple-system, BlinkMacSystemFont, Inter, Roboto, sans-serif";
 
@@ -14,6 +15,9 @@ export function MiniChart({
   range?: "1D" | "1M" | "3M" | "12M" | "60M" | "ALL";
   height?: number;
 }) {
+  const { theme } = useTheme();
+  const dark = theme === "dark";
+
   return (
     <TradingViewWidget
       widget="mini-symbol-overview"
@@ -24,14 +28,14 @@ export function MiniChart({
         height,
         locale: "en",
         dateRange: range,
-        colorTheme: "light",
+        colorTheme: theme,
         isTransparent: true,
         autosize: false,
         largeChartUrl: "",
         chartOnly: true,
         noTimeScale: true,
-        trendLineColor: "#1a63ff",
-        underLineColor: "rgba(26,99,255,0.16)",
+        trendLineColor: dark ? "#5b8cff" : "#1a63ff",
+        underLineColor: dark ? "rgba(91,140,255,0.22)" : "rgba(26,99,255,0.16)",
         underLineBottomColor: "rgba(26,99,255,0)",
         fontFamily: chartFont,
       }}
@@ -49,6 +53,9 @@ export function AdvancedChart({
   height?: number;
   interval?: string;
 }) {
+  const { theme } = useTheme();
+  const dark = theme === "dark";
+
   return (
     <TradingViewWidget
       widget="advanced-chart"
@@ -60,7 +67,7 @@ export function AdvancedChart({
         width: "100%",
         autosize: false,
         timezone: "Europe/London",
-        theme: "light",
+        theme,
         style: "3",
         locale: "en",
         hide_side_toolbar: true,
@@ -69,8 +76,8 @@ export function AdvancedChart({
         allow_symbol_change: false,
         save_image: false,
         withdateranges: true,
-        backgroundColor: "#ffffff",
-        gridColor: "rgba(233,235,240,0.8)",
+        backgroundColor: dark ? "#141821" : "#ffffff",
+        gridColor: dark ? "rgba(36,42,55,0.8)" : "rgba(233,235,240,0.8)",
         support_host: "https://www.tradingview.com",
       }}
     />
@@ -85,6 +92,8 @@ export function SymbolOverview({
   symbols: [string, string][];
   height?: number;
 }) {
+  const { theme } = useTheme();
+
   return (
     <TradingViewWidget
       widget="symbol-overview"
@@ -95,7 +104,7 @@ export function SymbolOverview({
         width: "100%",
         height,
         locale: "en",
-        colorTheme: "light",
+        colorTheme: theme,
         isTransparent: true,
         autosize: false,
         showVolume: false,
@@ -114,6 +123,8 @@ export function SymbolOverview({
 
 /** Headline facts about a company, straight from TradingView. */
 export function SymbolInfo({ symbol, height = 180 }: { symbol: string; height?: number }) {
+  const { theme } = useTheme();
+
   return (
     <TradingViewWidget
       widget="symbol-info"
@@ -122,7 +133,7 @@ export function SymbolInfo({ symbol, height = 180 }: { symbol: string; height?: 
         symbol,
         width: "100%",
         locale: "en",
-        colorTheme: "light",
+        colorTheme: theme,
         isTransparent: true,
       }}
     />
@@ -131,6 +142,8 @@ export function SymbolInfo({ symbol, height = 180 }: { symbol: string; height?: 
 
 /** The "what is the market mood" dial. */
 export function TechnicalGauge({ symbol, height = 400 }: { symbol: string; height?: number }) {
+  const { theme } = useTheme();
+
   return (
     <TradingViewWidget
       widget="technical-analysis"
@@ -144,7 +157,7 @@ export function TechnicalGauge({ symbol, height = 400 }: { symbol: string; heigh
         showIntervalTabs: false,
         displayMode: "single",
         locale: "en",
-        colorTheme: "light",
+        colorTheme: theme,
       }}
     />
   );
@@ -152,13 +165,15 @@ export function TechnicalGauge({ symbol, height = 400 }: { symbol: string; heigh
 
 /** Company fundamentals table. */
 export function Fundamentals({ symbol, height = 490 }: { symbol: string; height?: number }) {
+  const { theme } = useTheme();
+
   return (
     <TradingViewWidget
       widget="financials"
       height={height}
       config={{
         symbol,
-        colorTheme: "light",
+        colorTheme: theme,
         displayMode: "compact",
         isTransparent: true,
         width: "100%",
@@ -172,6 +187,8 @@ export function Fundamentals({ symbol, height = 490 }: { symbol: string; height?
 
 /** Scrolling ribbon of the markets the user actually owns. */
 export function Ticker({ symbols }: { symbols: { proName: string; title: string }[] }) {
+  const { theme } = useTheme();
+
   return (
     <TradingViewWidget
       widget="ticker-tape"
@@ -181,7 +198,7 @@ export function Ticker({ symbols }: { symbols: { proName: string; title: string 
         showSymbolLogo: true,
         isTransparent: true,
         displayMode: "adaptive",
-        colorTheme: "light",
+        colorTheme: theme,
         locale: "en",
       }}
     />
