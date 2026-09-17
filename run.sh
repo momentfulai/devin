@@ -12,11 +12,11 @@ fi
 
 if [ ! -f .env.local ]; then
   cp .env.example .env.local
-  echo "Created .env.local — add your OPENAI_API_KEY to it for the chat, then re-run ./run.sh"
+  echo "Created .env.local — add your VERCEL_AI_GATEWAY_API_KEY to it for the chat, then re-run ./run.sh"
 fi
 
-if grep -q '^OPENAI_API_KEY=$' .env.local; then
-  echo "Warning: OPENAI_API_KEY is empty in .env.local — every screen works, but the chat will error."
+if grep -q '^VERCEL_AI_GATEWAY_API_KEY=$' .env.local; then
+  echo "Warning: VERCEL_AI_GATEWAY_API_KEY is empty in .env.local — every screen works, but the chat will error."
 fi
 
 npm install

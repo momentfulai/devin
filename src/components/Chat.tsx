@@ -105,7 +105,7 @@ export function Chat() {
 
         {error && (
           <div className="msg bot" style={{ color: "var(--bad)" }}>
-            I could not answer that. If this is a fresh install, add an OPENAI_API_KEY to .env.local and
+            I could not answer that. If this is a fresh install, add a VERCEL_AI_GATEWAY_API_KEY to .env.local and
             restart.
           </div>
         )}

@@ -11,7 +11,7 @@ assistant.
 ./run.sh
 ```
 
-It creates `.env.local` from `.env.example` on the first run — add your `OPENAI_API_KEY` there for the
+It creates `.env.local` from `.env.example` on the first run — add your `VERCEL_AI_GATEWAY_API_KEY` there for the
 chat, then re-run. Everything except the chat works without a key. Equivalent manual steps:
 
 ```bash

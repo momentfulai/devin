@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { createGateway } from "@ai-sdk/gateway";
 import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
 import { z } from "zod";
 import {
@@ -17,6 +17,12 @@ import {
 } from "@/lib/portfolio";
 
 export const maxDuration = 30;
+
+const gateway = createGateway({
+  apiKey: process.env.VERCEL_AI_GATEWAY_API_KEY ?? process.env.AI_GATEWAY_API_KEY,
+  ...(process.env.VERCEL_AI_GATEWAY_BASE_URL ? { baseURL: process.env.VERCEL_AI_GATEWAY_BASE_URL } : {}),
+});
+const chatModel = process.env.CHAT_MODEL ?? "openai/gpt-4o-mini";
 
 const maxMessages = 40;
 const maxCharacters = 20000;
@@ -65,7 +71,7 @@ export async function POST(req: Request) {
   }
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: gateway(chatModel),
     system,
     messages: await convertToModelMessages(messages),
     stopWhen: stepCountIs(6),
