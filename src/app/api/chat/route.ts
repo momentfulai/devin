@@ -15,6 +15,7 @@ import {
   recommendations,
   scenarios,
 } from "@/lib/portfolio";
+import { defaultKnobs, simulate, strategies, strategySnapshot } from "@/lib/strategies";
 
 export const maxDuration = 30;
 
@@ -51,7 +52,8 @@ How you talk:
 - Two to four short sentences. No bullet lists longer than three items. No markdown headings.
 - Never invent a number. Call a tool and use what it returns. If a tool cannot answer, say so plainly.
 - You explain the adviser's reasoning; you do not place trades and you never promise a return.
-- When something is a judgement call, say what would have to be true for it to be wrong.`;
+- When something is a judgement call, say what would have to be true for it to be wrong.
+- Strategies run in practice mode: you can show what one would have done and what it would trade, but nothing reaches a real account until the person switches it on themselves.`;
 
 export async function POST(req: Request) {
   if (overRateLimit(req)) {
@@ -125,6 +127,33 @@ export async function POST(req: Request) {
         description: "Ideas that would fill a gap in the portfolio, and why each one fits or does not.",
         inputSchema: z.object({}),
         execute: async () => opportunities,
+      }),
+      getStrategies: tool({
+        description:
+          "The strategies the user can try, what each one would have done to their own money on default settings, and the trades it would place.",
+        inputSchema: z.object({}),
+        execute: async () => strategySnapshot(),
+      }),
+      testStrategy: tool({
+        description:
+          "Run one strategy with specific settings and return what it would have done over the last year versus doing nothing.",
+        inputSchema: z.object({
+          id: z.string().describe("Strategy id, e.g. trim-winners, drip, buy-dip, safety-net"),
+          settings: z
+            .record(z.string(), z.number())
+            .optional()
+            .describe("Override the strategy's sliders, e.g. { limit: 8 }"),
+        }),
+        execute: async ({ id, settings }) => {
+          const match = strategies.find((s) => s.id === id);
+          if (!match) return { found: false, available: strategies.map((s) => s.id) };
+          return {
+            found: true,
+            name: match.name,
+            settings: { ...defaultKnobs(match), ...settings },
+            result: simulate(match.id, { ...defaultKnobs(match), ...settings }),
+          };
+        },
       }),
       whatIf: tool({
         description:

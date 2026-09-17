@@ -9,6 +9,7 @@ const suggestions = [
   "Explain my fees",
   "Why sell Nvidia?",
   "What if markets fall 30%?",
+  "Which strategy suits me?",
 ];
 
 const toolLabels: Record<string, string> = {
@@ -19,6 +20,8 @@ const toolLabels: Record<string, string> = {
   explainRecommendation: "Pulling up the working",
   getOpportunities: "Scanning for gaps",
   whatIf: "Running the fall through your money",
+  getStrategies: "Comparing the strategies",
+  testStrategy: "Testing it on your money",
 };
 
 export function Chat() {
