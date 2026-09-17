@@ -1,0 +1,55 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Icon, type IconName } from "./Icon";
+import { ThemeToggle } from "./theme";
+import { accounts, holdings } from "@/lib/portfolio";
+
+/** The tab opens on the biggest thing they own, then they can pick another. */
+const firstCompany =
+  [...holdings].filter((h) => h.kind !== "cash" && h.tvSymbol).sort((a, b) => b.value - a.value)[0]?.symbol ?? "NVDA";
+
+const tabs: { href: string; label: string; icon: IconName }[] = [
+  { href: "/", label: "Today", icon: "home" },
+  { href: "/risk", label: "Risk", icon: "shield" },
+  { href: "/actions", label: "Actions", icon: "bolt" },
+  { href: "/ideas", label: "Ideas", icon: "search" },
+  { href: "/strategies", label: "Strategies", icon: "target" },
+  { href: "/future", label: "Future", icon: "spark" },
+  { href: `/company/${firstCompany}`, label: "Companies", icon: "chart" },
+  { href: "/accounts", label: "Accounts", icon: "link" },
+];
+
+export function Nav() {
+  const pathname = usePathname();
+
+  return (
+    <header className="top">
+      <div className="wrap topbar">
+        <Link href="/" className="logo">
+          <span className="mark" />
+          Northstar
+        </Link>
+        <nav className="tabs">
+          {tabs.map((t) => {
+            const on = t.href === "/" ? pathname === "/" : pathname.startsWith(t.href.split("/").slice(0, 2).join("/"));
+            return (
+              <Link key={t.href} href={t.href} className={on ? "on" : ""}>
+                <Icon name={t.icon} />
+                {t.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <span className="spacer" />
+        <span className="chip good">
+          <Icon name="check" className="g" style={{ width: 13, height: 13 }} />
+          {accounts.filter((a) => a.counted).length} accounts live
+        </span>
+        <ThemeToggle />
+        <span className="avatar" />
+      </div>
+    </header>
+  );
+}
