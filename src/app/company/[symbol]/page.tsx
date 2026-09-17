@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { Bar, Card, LabelledBar, SectionTitle } from "@/components/ui";
 import { AdvancedChart, Fundamentals, SymbolInfo, TechnicalGauge } from "@/components/tradingview/widgets";
-import { companies, holdings, opportunities } from "@/lib/portfolio";
+import { CompanyPicker } from "@/components/CompanyPicker";
+import { allocationOf, companies, holdings, money, opportunities, pct } from "@/lib/portfolio";
+import { tradeable } from "@/lib/whatif";
 
 function resolve(symbol: string) {
   const upper = symbol.toUpperCase();
@@ -9,6 +11,8 @@ function resolve(symbol: string) {
   if (facts) return { tvSymbol: facts.tvSymbol, name: facts.name, facts };
   const held = holdings.find((h) => h.symbol.toUpperCase() === upper);
   if (held?.tvSymbol) return { tvSymbol: held.tvSymbol, name: held.name, facts: null };
+  const watched = tradeable.find((t) => t.symbol.toUpperCase() === upper);
+  if (watched) return { tvSymbol: watched.tvSymbol, name: watched.name, facts: null };
   const idea = opportunities.find((o) => o.tvSymbol.split(":")[1].toUpperCase() === upper);
   if (idea) return { tvSymbol: idea.tvSymbol, name: idea.title, facts: null };
   return null;
@@ -19,9 +23,48 @@ export default async function CompanyPage({ params }: PageProps<"/company/[symbo
   const found = resolve(symbol);
   if (!found) notFound();
   const { tvSymbol, name, facts } = found;
+  const held = holdings.find((h) => h.symbol.toUpperCase() === symbol.toUpperCase());
+  const watched = tradeable.find((t) => t.symbol.toUpperCase() === symbol.toUpperCase());
 
   return (
     <div className="stack">
+      <CompanyPicker active={symbol} />
+
+      <Card>
+        <SectionTitle icon="layers" title={held ? `Your ${name}` : `You don't own ${name}`} />
+        {held ? (
+          <div className="grid g3">
+            <div>
+              <div className="tiny">What it is worth</div>
+              <b style={{ fontSize: 20 }}>{money(held.value)}</b>
+              <div className="tiny">{allocationOf(held).toFixed(1)}% of everything you own</div>
+            </div>
+            <div>
+              <div className="tiny">Since you bought</div>
+              <b style={{ fontSize: 20 }}>{money(held.value - held.costBasis)}</b>
+              <div className="tiny">
+                {pct(held.returnPct)} over {held.returnWindow}
+              </div>
+            </div>
+            <div>
+              <div className="tiny">Where it lives</div>
+              <b style={{ fontSize: 20 }}>{held.account}</b>
+              <div className="tiny">{held.note ?? "Nothing needs doing here today."}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid g2">
+            <p className="muted" style={{ fontSize: 14 }}>
+              {watched?.plain ?? "Not in your accounts today."}
+            </p>
+            <p className="tiny">
+              Try it for pretend on the Future tab: buy an amount and see what it would do to your mix and to a
+              bad year, without anything real happening.
+            </p>
+          </div>
+        )}
+      </Card>
+
       <Card pad={false}>
         <SymbolInfo symbol={tvSymbol} />
       </Card>

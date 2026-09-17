@@ -459,6 +459,25 @@ hr {
   padding: 12px;
 }
 
+/* Company lookup */
+.picker {
+  display: grid;
+  gap: 8px;
+}
+.picker .seg a {
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.picker .seg a.on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+  font-weight: 600;
+}
+
 /* Good / average / bad futures */
 .outcome {
   display: flex;

@@ -4,7 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
 import { ThemeToggle } from "./theme";
-import { accounts } from "@/lib/portfolio";
+import { accounts, holdings } from "@/lib/portfolio";
+
+/** The tab opens on the biggest thing they own, then they can pick another. */
+const firstCompany =
+  [...holdings].filter((h) => h.kind !== "cash" && h.tvSymbol).sort((a, b) => b.value - a.value)[0]?.symbol ?? "NVDA";
 
 const tabs: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Today", icon: "home" },
@@ -13,7 +17,7 @@ const tabs: { href: string; label: string; icon: IconName }[] = [
   { href: "/ideas", label: "Ideas", icon: "search" },
   { href: "/strategies", label: "Strategies", icon: "target" },
   { href: "/future", label: "Future", icon: "spark" },
-  { href: "/company/NVDA", label: "Company", icon: "chart" },
+  { href: `/company/${firstCompany}`, label: "Companies", icon: "chart" },
   { href: "/accounts", label: "Accounts", icon: "link" },
 ];
 

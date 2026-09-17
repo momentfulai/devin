@@ -29,7 +29,7 @@ export function MiniChart({
         locale: "en",
         dateRange: range,
         colorTheme: theme,
-        isTransparent: true,
+        isTransparent: false,
         autosize: false,
         largeChartUrl: "",
         chartOnly: true,
@@ -105,7 +105,7 @@ export function SymbolOverview({
         height,
         locale: "en",
         colorTheme: theme,
-        isTransparent: true,
+        isTransparent: false,
         autosize: false,
         showVolume: false,
         showMA: false,
@@ -134,7 +134,7 @@ export function SymbolInfo({ symbol, height = 180 }: { symbol: string; height?: 
         width: "100%",
         locale: "en",
         colorTheme: theme,
-        isTransparent: true,
+        isTransparent: false,
       }}
     />
   );
@@ -153,7 +153,7 @@ export function TechnicalGauge({ symbol, height = 400 }: { symbol: string; heigh
         interval: "1D",
         width: "100%",
         height,
-        isTransparent: true,
+        isTransparent: false,
         showIntervalTabs: false,
         displayMode: "single",
         locale: "en",
@@ -175,7 +175,7 @@ export function Fundamentals({ symbol, height = 490 }: { symbol: string; height?
         symbol,
         colorTheme: theme,
         displayMode: "compact",
-        isTransparent: true,
+        isTransparent: false,
         width: "100%",
         height,
         locale: "en",
@@ -196,7 +196,7 @@ export function Ticker({ symbols }: { symbols: { proName: string; title: string 
       config={{
         symbols,
         showSymbolLogo: true,
-        isTransparent: true,
+        isTransparent: false,
         displayMode: "adaptive",
         colorTheme: theme,
         locale: "en",
