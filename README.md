@@ -8,8 +8,15 @@ assistant.
 ## Running it
 
 ```bash
+./run.sh
+```
+
+It creates `.env.local` from `.env.example` on the first run — add your `OPENAI_API_KEY` there for the
+chat, then re-run. Everything except the chat works without a key. Equivalent manual steps:
+
+```bash
 npm install
-cp .env.example .env.local   # add OPENAI_API_KEY for the chat
+cp .env.example .env.local
 npm run dev
 ```
 
