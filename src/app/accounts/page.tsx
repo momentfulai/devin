@@ -28,14 +28,19 @@ export default function AccountsPage() {
                     <div className="tiny">{a.label}</div>
                   </div>
                   <div className="hide-sm">
-                    <Bar value={(a.value / totalValue) * 100} tone="accent" height={8} />
-                    <span className="tiny">{((a.value / totalValue) * 100).toFixed(0)}% of everything</span>
+                    {a.counted ? (
+                      <>
+                        <Bar value={(a.value / totalValue) * 100} tone="accent" height={8} />
+                        <span className="tiny">{((a.value / totalValue) * 100).toFixed(0)}% of everything</span>
+                      </>
+                    ) : (
+                      <span className="tiny">Not counted until you log in again</span>
+                    )}
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <b>{money(a.value)}</b>
-                    <div className="tiny" style={{ color: a.changePct >= 0 ? "var(--good)" : "var(--bad)" }}>
-                      {a.changePct >= 0 ? "+" : ""}
-                      {a.changePct}%
+                    <div className="tiny" style={{ color: a.counted && a.changePct < 0 ? "var(--bad)" : a.counted ? "var(--good)" : undefined }}>
+                      {a.counted ? `${a.changePct >= 0 ? "+" : ""}${a.changePct}%` : "Last known"}
                     </div>
                   </div>
                   <span className={`chip ${a.status === "live" ? "good" : a.status === "syncing" ? "info" : "warn"}`}>

@@ -23,6 +23,8 @@ export type Account = {
   changePct: number;
   status: "live" | "syncing" | "action";
   lastSync: string;
+  /** False while an account's holdings are not synced, so its value is left out of every total. */
+  counted: boolean;
 };
 
 export type Scenario = {
@@ -75,7 +77,7 @@ export const holdings: Holding[] = [
     returnPct: 18.2,
     returnWindow: "3 months",
     flag: { tone: "bad", label: "Too big" },
-    note: "Your single largest bet, and three of your funds own it too.",
+    note: "Your single largest bet, and four of your funds own it too.",
   },
   {
     symbol: "VWRL",
@@ -151,7 +153,7 @@ export const holdings: Holding[] = [
   },
   {
     symbol: "GILT",
-    tvSymbol: "NASDAQ:SHY",
+    tvSymbol: "LSE:IGLS",
     name: "Short UK bonds",
     colour: "#565e6e",
     value: 8100,
@@ -196,15 +198,21 @@ export const holdings: Holding[] = [
 ];
 
 export const accounts: Account[] = [
-  { id: "vg", provider: "Vanguard", label: "Stocks & shares ISA", value: 49400, changePct: 2.4, status: "live", lastSync: "2 minutes ago" },
-  { id: "ft", provider: "Freetrade", label: "General account", value: 17820, changePct: 3.1, status: "live", lastSync: "5 minutes ago" },
-  { id: "hl", provider: "Hargreaves Lansdown", label: "Workplace pension", value: 13700, changePct: 1.2, status: "live", lastSync: "1 hour ago" },
-  { id: "ii", provider: "Interactive Investor", label: "Lifetime ISA", value: 3400, changePct: 0, status: "action", lastSync: "Needs re-login" },
+  { id: "vg", provider: "Vanguard", label: "Stocks & shares ISA", value: 49400, changePct: 2.4, status: "live", lastSync: "2 minutes ago", counted: true },
+  { id: "ft", provider: "Freetrade", label: "General account", value: 17820, changePct: 3.1, status: "live", lastSync: "5 minutes ago", counted: true },
+  { id: "hl", provider: "Hargreaves Lansdown", label: "Workplace pension", value: 13700, changePct: 1.2, status: "live", lastSync: "1 hour ago", counted: true },
+  { id: "ii", provider: "Interactive Investor", label: "Lifetime ISA", value: 3400, changePct: 0, status: "action", lastSync: "Needs re-login", counted: false },
 ];
 
 export const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
 export const totalCost = holdings.reduce((sum, h) => sum + h.costBasis, 0);
 export const totalProfit = totalValue - totalCost;
+
+const shareOfPortfolio = (value: number) => Number(((value / totalValue) * 100).toFixed(1));
+const valueOf = (symbol: string) => holdings.find((h) => h.symbol === symbol)?.value ?? 0;
+
+/** What the user holds directly in a company, as a share of everything counted. */
+export const directExposurePct = (symbol: string) => shareOfPortfolio(valueOf(symbol));
 
 export const weekChange = { amount: 1840, pct: 2.2 };
 export const feesPerYear = 412;
@@ -218,6 +226,9 @@ export const scenarios: Scenario[] = [
   { id: "cuts", label: "Rates get cut", plainLabel: "Borrowing gets cheaper", impactPct: 7.8, driver: "Growth shares, bonds" },
 ];
 
+/** How much of the portfolio sits in Nvidia through funds rather than the direct holding. */
+export const nvidiaHiddenPct = 5.4;
+
 export const badYearLossPct = 31;
 export const comfortLimitPct = 20;
 
@@ -228,8 +239,8 @@ export const overlap = {
     { a: "US 500", b: "Tech fund", sharePct: 71 },
   ],
   repeated: [
-    { name: "Apple", pct: 7.1, funds: 3 },
-    { name: "Nvidia", pct: 9.4, funds: 4 },
+    { name: "Apple", pct: Number((directExposurePct("AAPL") + 1.4).toFixed(1)), funds: 3 },
+    { name: "Nvidia", pct: Number((directExposurePct("NVDA") + nvidiaHiddenPct).toFixed(1)), funds: 4 },
     { name: "Microsoft", pct: 6.3, funds: 3 },
   ],
 };
@@ -239,12 +250,12 @@ export const recommendations: Recommendation[] = [
     id: "trim-nvda",
     title: "Trim Nvidia back to a normal size",
     plainWhy:
-      "Nothing is wrong with the company. One in every eleven pounds you own sits in it, and four of your funds quietly own more. A bad month there decides your whole year.",
+      "Nothing is wrong with the company. One in every ten pounds you own sits in it, and four of your funds quietly own more. A bad month there decides your whole year.",
     symbol: "NVDA",
     tvSymbol: "NASDAQ:NVDA",
-    before: 9.4,
+    before: directExposurePct("NVDA"),
     after: 5,
-    beforeLabel: "9.4% of everything",
+    beforeLabel: `${directExposurePct("NVDA")}% of everything`,
     afterLabel: "5% of everything",
     badYearBefore: 31,
     badYearAfter: 24,
@@ -313,7 +324,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: "shortgilts",
-    tvSymbol: "NASDAQ:SHY",
+    tvSymbol: "LSE:IGLS",
     title: "Short UK bonds",
     subtitle: "A shock absorber that currently pays you to hold it",
     chipTone: "good",
@@ -389,7 +400,7 @@ export const companies: Record<string, CompanyFacts> = {
       { claim: "No rival takes meaningful share", confidence: 48 },
       { claim: "Margins stay above 50%", confidence: 35 },
     ],
-    exposure: { direct: 4.0, hidden: 5.4 },
+    exposure: { direct: directExposurePct("NVDA"), hidden: nvidiaHiddenPct },
     vsIndex: [
       { label: "Growth", you: 95, index: 42 },
       { label: "Profitability", you: 92, index: 48 },
@@ -457,6 +468,12 @@ export function portfolioSnapshot() {
       flag: h.flag?.label,
       note: h.note,
     })),
-    accounts: accounts.map((a) => ({ provider: a.provider, label: a.label, value: a.value, status: a.status })),
+    accounts: accounts.map((a) => ({
+      provider: a.provider,
+      label: a.label,
+      value: a.value,
+      status: a.status,
+      countedInTotal: a.counted,
+    })),
   };
 }

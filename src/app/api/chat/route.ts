@@ -18,6 +18,25 @@ import {
 
 export const maxDuration = 30;
 
+const maxMessages = 40;
+const maxCharacters = 20000;
+
+const textLength = (message: UIMessage) =>
+  message.parts.reduce((sum, part) => sum + (part.type === "text" ? part.text.length : 0), 0);
+
+const windowMs = 60_000;
+const maxRequestsPerWindow = 20;
+const hits = new Map<string, number[]>();
+
+function overRateLimit(req: Request) {
+  const caller = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const now = Date.now();
+  const recent = (hits.get(caller) ?? []).filter((t) => now - t < windowMs);
+  recent.push(now);
+  hits.set(caller, recent);
+  return recent.length > maxRequestsPerWindow;
+}
+
 const system = `You are Northstar, a calm financial guide for someone with no investing background.
 
 How you talk:
@@ -29,7 +48,21 @@ How you talk:
 - When something is a judgement call, say what would have to be true for it to be wrong.`;
 
 export async function POST(req: Request) {
+  if (overRateLimit(req)) {
+    return Response.json({ error: "Too many questions at once. Try again in a minute." }, { status: 429 });
+  }
+
   const { messages }: { messages: UIMessage[] } = await req.json();
+
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return Response.json({ error: "No messages sent." }, { status: 400 });
+  }
+  if (messages.length > maxMessages) {
+    return Response.json({ error: "This conversation is too long. Start a new one." }, { status: 413 });
+  }
+  if (messages.reduce((sum, m) => sum + textLength(m), 0) > maxCharacters) {
+    return Response.json({ error: "That message is too long." }, { status: 413 });
+  }
 
   const result = streamText({
     model: openai("gpt-4o-mini"),
@@ -98,6 +131,9 @@ export async function POST(req: Request) {
           const scope = symbol
             ? holdings.filter((h) => h.symbol.toLowerCase() === symbol.toLowerCase())
             : holdings.filter((h) => h.kind !== "cash");
+          if (symbol && scope.length === 0) {
+            return { found: false, symbol, owned: holdings.map((h) => h.symbol) };
+          }
           const exposed = scope.reduce((sum, h) => sum + h.value, 0);
           const loss = Math.round((exposed * fallPct) / 100);
           return {

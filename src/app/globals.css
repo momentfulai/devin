@@ -537,3 +537,32 @@ ul.clean li:first-child {
     display: none;
   }
 }
+
+@media (max-width: 860px) {
+  .wrap {
+    padding: 0 14px;
+  }
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 12px;
+    padding: 10px 0;
+  }
+  .topbar .chip {
+    display: none;
+  }
+  nav.tabs {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  nav.tabs::-webkit-scrollbar {
+    display: none;
+  }
+  nav.tabs a {
+    flex: 0 0 auto;
+    padding: 8px 11px;
+    font-size: 13px;
+  }
+}
